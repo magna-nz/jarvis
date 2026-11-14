@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 690" width="1000" height="690" role="img" aria-label="Each room has a Voice PE puck with microphones, wake word and echo cancellation, and a powered speaker on its 3.5mm output. The puck streams audio to Home Assistant on an always-on PC. Home Assistant sends audio to Whisper for speech-to-text, the text and room to the orchestrator, and the reply to Piper for text-to-speech, then plays it on the puck. The orchestrator calls the LLM and MCP tool servers; tools act through Home Assistant to control devices and play Spotify via Music Assistant. The orchestrator can also push an announcement to a room.">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3E5470"/></marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C0392B"/></marker>
+    <marker id="arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F7A6D"/></marker>
+    <style>
+      .t { font-family: Inter, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1B2431; font-size: 13px; }
+      .b { font-weight: 600; }
+      .m { fill: #5B6B7F; font-size: 12px; }
+      .lbl { font-family: Inter, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 12px; fill: #3E5470; paint-order: stroke; stroke: #F6F7F9; stroke-width: 6px; stroke-linejoin: round; }
+      .lbl-red { fill: #C0392B; }
+      .lbl-teal { fill: #1F7A6D; }
+      .box { fill: #FFFFFF; stroke: #C9D1DB; stroke-width: 1.5; }
+      .flow { stroke: #3E5470; stroke-width: 1.8; fill: none; }
+      .red { stroke: #C0392B; stroke-width: 1.8; fill: none; }
+      .teal { stroke: #1F7A6D; stroke-width: 1.8; fill: none; }
+    </style>
+  </defs>
+
+  <!-- card background so the figure reads on light and dark pages alike -->
+  <rect x="0" y="0" width="1000" height="690" rx="12" fill="#F6F7F9"/>
+
+  <!-- room boundary -->
+  <rect x="24" y="24" width="250" height="420" rx="10" fill="none" stroke="#9AA7B6" stroke-width="1.5" stroke-dasharray="7 5"/>
+  <text x="40" y="48" class="t m" style="letter-spacing:0.08em">EACH ROOM</text>
+
+  <rect x="48" y="70" width="200" height="48" rx="6" class="box"/>
+  <text x="148" y="99" class="t b" text-anchor="middle">You</text>
+
+  <rect x="48" y="160" width="200" height="150" rx="8" class="box"/>
+  <text x="148" y="184" class="t b" text-anchor="middle">Voice PE puck</text>
+  <rect x="62" y="198" width="172" height="40" rx="6" fill="#E6F4F1" stroke="#1F7A6D" stroke-width="1.5"/>
+  <text x="148" y="223" class="t b" text-anchor="middle" fill="#1F7A6D">mics · wake word</text>
+  <rect x="62" y="250" width="172" height="40" rx="6" class="box"/>
+  <text x="148" y="275" class="t" text-anchor="middle">echo cancellation</text>
+
+  <rect x="48" y="360" width="200" height="56" rx="6" class="box"/>
+  <text x="148" y="384" class="t b" text-anchor="middle">Powered speaker</text>
+  <text x="148" y="402" class="t m" text-anchor="middle">3.5mm from the puck</text>
+
+  <!-- PC boundary -->
+  <rect x="330" y="24" width="646" height="516" rx="10" fill="none" stroke="#9AA7B6" stroke-width="1.5" stroke-dasharray="7 5"/>
+  <text x="346" y="48" class="t m" style="letter-spacing:0.08em">ALWAYS-ON PC</text>
+  <text x="960" y="48" class="t m" text-anchor="end">moves to the Mac by changing host names</text>
+
+  <!-- Home Assistant -->
+  <rect x="354" y="70" width="220" height="300" rx="8" fill="#FFFFFF" stroke="#3E5470" stroke-width="2"/>
+  <text x="464" y="96" class="t b" text-anchor="middle">Home Assistant</text>
+  <text x="464" y="114" class="t m" text-anchor="middle">the plumbing</text>
+  <rect x="370" y="130" width="188" height="40" rx="6" class="box"/>
+  <text x="464" y="155" class="t" text-anchor="middle">voice pipeline</text>
+  <rect x="370" y="184" width="188" height="40" rx="6" class="box"/>
+  <text x="464" y="209" class="t" text-anchor="middle">Music Assistant</text>
+  <rect x="370" y="238" width="188" height="40" rx="6" class="box"/>
+  <text x="464" y="263" class="t" text-anchor="middle">device integrations</text>
+  <rect x="370" y="292" width="188" height="40" rx="6" fill="#FBEAE7" stroke="#C0392B" stroke-width="1.5"/>
+  <text x="464" y="317" class="t b" text-anchor="middle" fill="#C0392B">announce to a room</text>
+
+  <!-- speech services -->
+  <rect x="660" y="70" width="292" height="52" rx="6" class="box"/>
+  <text x="806" y="92" class="t b" text-anchor="middle">Speech-to-text</text>
+  <text x="806" y="110" class="t m" text-anchor="middle">Whisper · GPU</text>
+
+  <rect x="660" y="140" width="292" height="52" rx="6" class="box"/>
+  <text x="806" y="162" class="t b" text-anchor="middle">Text-to-speech</text>
+  <text x="806" y="180" class="t m" text-anchor="middle">Piper</text>
+
+  <!-- orchestrator -->
+  <rect x="660" y="230" width="292" height="110" rx="8" fill="#E6F4F1" stroke="#1F7A6D" stroke-width="2"/>
+  <text x="806" y="256" class="t b" text-anchor="middle" fill="#1F7A6D">Orchestrator</text>
+  <text x="806" y="274" class="t m" text-anchor="middle">your code · the brain</text>
+  <text x="806" y="302" class="t" text-anchor="middle">tool-calling loop · room context</text>
+  <text x="806" y="322" class="t m" text-anchor="middle">owns reminders</text>
+
+  <rect x="660" y="400" width="136" height="60" rx="6" class="box"/>
+  <text x="728" y="426" class="t b" text-anchor="middle">LLM</text>
+  <text x="728" y="444" class="t m" text-anchor="middle">Ollama · GPU</text>
+
+  <rect x="816" y="400" width="136" height="60" rx="6" class="box"/>
+  <text x="884" y="426" class="t b" text-anchor="middle">Tools</text>
+  <text x="884" y="444" class="t m" text-anchor="middle">MCP servers</text>
+
+  <!-- outside the PC -->
+  <rect x="48" y="600" width="200" height="56" rx="6" class="box"/>
+  <text x="148" y="624" class="t b" text-anchor="middle">Tapo and other devices</text>
+  <text x="148" y="642" class="t m" text-anchor="middle">plugs · bulbs · sensors</text>
+
+  <rect x="390" y="600" width="220" height="56" rx="6" class="box"/>
+  <text x="500" y="624" class="t b" text-anchor="middle">Spotify</text>
+  <text x="500" y="642" class="t m" text-anchor="middle">through Music Assistant</text>
+
+  <!-- room flows -->
+  <line x1="148" y1="118" x2="148" y2="158" class="teal" marker-end="url(#arrow-teal)"/>
+  <text x="158" y="143" class="lbl lbl-teal">speech</text>
+  <line x1="148" y1="310" x2="148" y2="358" class="teal" marker-end="url(#arrow-teal)"/>
+  <text x="158" y="339" class="lbl lbl-teal">replies · music</text>
+
+  <!-- puck and Home Assistant -->
+  <line x1="248" y1="200" x2="352" y2="200" class="teal" marker-end="url(#arrow-teal)"/>
+  <text x="300" y="191" class="lbl lbl-teal" text-anchor="middle">audio in</text>
+  <line x1="352" y1="240" x2="250" y2="240" class="teal" marker-end="url(#arrow-teal)"/>
+  <text x="300" y="257" class="lbl lbl-teal" text-anchor="middle">audio out</text>
+  <line x1="352" y1="290" x2="250" y2="290" class="red" marker-end="url(#arrow-red)"/>
+  <text x="300" y="281" class="lbl lbl-red" text-anchor="middle">announce</text>
+
+  <!-- Home Assistant and speech -->
+  <line x1="574" y1="96" x2="658" y2="96" class="teal" marker-end="url(#arrow-teal)"/>
+  <text x="616" y="87" class="lbl lbl-teal" text-anchor="middle">audio</text>
+  <line x1="574" y1="166" x2="658" y2="166" class="flow" marker-end="url(#arrow)"/>
+  <text x="616" y="157" class="lbl" text-anchor="middle">reply text</text>
+
+  <!-- Home Assistant and orchestrator -->
+  <line x1="574" y1="250" x2="658" y2="250" class="flow" marker-end="url(#arrow)"/>
+  <text x="616" y="241" class="lbl" text-anchor="middle">text + room</text>
+  <line x1="658" y1="278" x2="576" y2="278" class="flow" marker-end="url(#arrow)"/>
+  <text x="616" y="295" class="lbl" text-anchor="middle">reply</text>
+  <line x1="658" y1="312" x2="560" y2="312" class="red" marker-end="url(#arrow-red)"/>
+  <text x="616" y="329" class="lbl lbl-red" text-anchor="middle">announce</text>
+
+  <!-- orchestrator to model and tools -->
+  <line x1="728" y1="340" x2="728" y2="398" class="flow" marker-end="url(#arrow)"/>
+  <text x="738" y="374" class="lbl">prompt</text>
+  <line x1="884" y1="340" x2="884" y2="398" class="flow" marker-end="url(#arrow)"/>
+  <text x="874" y="374" class="lbl" text-anchor="end">tool calls</text>
+
+  <!-- tools act through Home Assistant -->
+  <path d="M884 460 L884 500 L616 500 L616 352 L576 352" class="flow" marker-end="url(#arrow)"/>
+  <text x="750" y="491" class="lbl" text-anchor="middle">control devices · play music</text>
+
+  <!-- Home Assistant to the outside -->
+  <path d="M410 370 L410 566 L148 566 L148 598" class="flow" marker-end="url(#arrow)"/>
+  <text x="279" y="557" class="lbl" text-anchor="middle">switch · dim · read state</text>
+  <line x1="500" y1="598" x2="500" y2="372" class="teal" marker-end="url(#arrow-teal)"/>
+  <text x="510" y="582" class="lbl lbl-teal">music stream</text>
+</svg>

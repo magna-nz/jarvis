@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" width="1000" height="500" role="img" aria-label="Inside the orchestrator. Home Assistant's thin Jarvis conversation agent posts text and room to the orchestrator's HTTP API and receives a reply. The turn loop calls the LLM client, which talks to Ollama over the OpenAI-compatible API, and the MCP client, which talks to tool servers for home-assistant, music, reminders and any tool added later. The turn loop can set reminders on the scheduler, which stores them and later pushes an announcement to a room through Home Assistant.">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3E5470"/></marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C0392B"/></marker>
+    <style>
+      .t { font-family: Inter, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1B2431; font-size: 13px; }
+      .b { font-weight: 600; }
+      .m { fill: #5B6B7F; font-size: 12px; }
+      .code { font-family: "JetBrains Mono", Menlo, Consolas, monospace; font-size: 11.5px; fill: #1B2431; }
+      .lbl { font-family: Inter, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 12px; fill: #3E5470; paint-order: stroke; stroke: #F6F7F9; stroke-width: 6px; stroke-linejoin: round; }
+      .lbl-red { fill: #C0392B; }
+      .box { fill: #FFFFFF; stroke: #C9D1DB; stroke-width: 1.5; }
+      .flow { stroke: #3E5470; stroke-width: 1.8; fill: none; }
+      .red { stroke: #C0392B; stroke-width: 1.8; fill: none; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1000" height="500" rx="12" fill="#F6F7F9"/>
+
+  <!-- Home Assistant -->
+  <rect x="24" y="60" width="170" height="400" rx="8" fill="#FFFFFF" stroke="#3E5470" stroke-width="2"/>
+  <text x="109" y="86" class="t b" text-anchor="middle">Home Assistant</text>
+  <rect x="38" y="100" width="142" height="52" rx="6" class="box"/>
+  <text x="109" y="122" class="t b" text-anchor="middle">Jarvis agent</text>
+  <text x="109" y="140" class="t m" text-anchor="middle">thin Python shim</text>
+  <rect x="38" y="250" width="142" height="52" rx="6" class="box"/>
+  <text x="109" y="272" class="t b" text-anchor="middle">MCP Server</text>
+  <text x="109" y="290" class="t m" text-anchor="middle">exposes devices</text>
+  <rect x="38" y="388" width="142" height="52" rx="6" fill="#FBEAE7" stroke="#C0392B" stroke-width="1.5"/>
+  <text x="109" y="410" class="t b" text-anchor="middle" fill="#C0392B">announce</text>
+  <text x="109" y="428" class="t m" text-anchor="middle">speaks in a room</text>
+
+  <!-- orchestrator boundary -->
+  <rect x="290" y="24" width="420" height="452" rx="10" fill="none" stroke="#9AA7B6" stroke-width="1.5" stroke-dasharray="7 5"/>
+  <text x="306" y="48" class="t m" style="letter-spacing:0.08em">ORCHESTRATOR</text>
+
+  <rect x="314" y="92" width="170" height="60" rx="6" class="box"/>
+  <text x="399" y="116" class="t b" text-anchor="middle">HTTP API</text>
+  <text x="399" y="136" class="code" text-anchor="middle">POST /v1/converse</text>
+
+  <rect x="314" y="194" width="170" height="140" rx="8" fill="#E6F4F1" stroke="#1F7A6D" stroke-width="2"/>
+  <text x="399" y="222" class="t b" text-anchor="middle" fill="#1F7A6D">Turn loop</text>
+  <text x="399" y="248" class="t" text-anchor="middle">add room and history</text>
+  <text x="399" y="270" class="t" text-anchor="middle">ask the model</text>
+  <text x="399" y="292" class="t" text-anchor="middle">run the tools it wants</text>
+  <text x="399" y="314" class="t m" text-anchor="middle">repeat until it replies</text>
+
+  <rect x="314" y="384" width="170" height="60" rx="6" fill="#FBEAE7" stroke="#C0392B" stroke-width="1.5"/>
+  <text x="399" y="408" class="t b" text-anchor="middle" fill="#C0392B">Scheduler</text>
+  <text x="399" y="426" class="t m" text-anchor="middle">reminders</text>
+
+  <rect x="520" y="194" width="170" height="56" rx="6" class="box"/>
+  <text x="605" y="217" class="t b" text-anchor="middle">LLM client</text>
+  <text x="605" y="235" class="t m" text-anchor="middle">OpenAI-compatible</text>
+
+  <rect x="520" y="278" width="170" height="56" rx="6" class="box"/>
+  <text x="605" y="301" class="t b" text-anchor="middle">MCP client</text>
+  <text x="605" y="319" class="t m" text-anchor="middle">lists tools at start</text>
+
+  <rect x="520" y="384" width="170" height="60" rx="6" class="box"/>
+  <text x="605" y="408" class="t b" text-anchor="middle">State</text>
+  <text x="605" y="426" class="t m" text-anchor="middle">sessions · reminders</text>
+
+  <!-- outside, right -->
+  <rect x="790" y="194" width="186" height="56" rx="6" class="box"/>
+  <text x="883" y="217" class="t b" text-anchor="middle">Ollama</text>
+  <text x="883" y="235" class="t m" text-anchor="middle">PC now · Mac later</text>
+
+  <text x="790" y="286" class="t m" style="letter-spacing:0.08em">TOOL SERVERS</text>
+  <rect x="790" y="296" width="186" height="34" rx="6" class="box"/>
+  <text x="883" y="318" class="code" text-anchor="middle">home-assistant</text>
+  <rect x="790" y="338" width="186" height="34" rx="6" class="box"/>
+  <text x="883" y="360" class="code" text-anchor="middle">music</text>
+  <rect x="790" y="380" width="186" height="34" rx="6" class="box"/>
+  <text x="883" y="402" class="code" text-anchor="middle">reminders</text>
+  <rect x="790" y="422" width="186" height="34" rx="6" fill="none" stroke="#9AA7B6" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="883" y="444" class="t m" text-anchor="middle">your next tool</text>
+
+  <!-- Home Assistant and API -->
+  <line x1="194" y1="110" x2="312" y2="110" class="flow" marker-end="url(#arrow)"/>
+  <text x="242" y="101" class="lbl" text-anchor="middle">text + room</text>
+  <line x1="312" y1="136" x2="196" y2="136" class="flow" marker-end="url(#arrow)"/>
+  <text x="242" y="153" class="lbl" text-anchor="middle">reply</text>
+
+  <!-- inside -->
+  <line x1="399" y1="152" x2="399" y2="192" class="flow" marker-end="url(#arrow)"/>
+  <line x1="484" y1="222" x2="518" y2="222" class="flow" marker-end="url(#arrow)"/>
+  <line x1="484" y1="306" x2="518" y2="306" class="flow" marker-end="url(#arrow)"/>
+  <line x1="399" y1="334" x2="399" y2="382" class="flow" marker-end="url(#arrow)"/>
+  <text x="409" y="363" class="lbl">set a reminder</text>
+  <line x1="484" y1="414" x2="520" y2="414" class="flow"/>
+
+  <!-- to Ollama -->
+  <line x1="690" y1="222" x2="788" y2="222" class="flow" marker-end="url(#arrow)"/>
+  <text x="750" y="213" class="lbl" text-anchor="middle">chat</text>
+
+  <!-- to tool servers -->
+  <path d="M690 306 L750 306" class="flow"/>
+  <path d="M750 306 L750 439" class="flow"/>
+  <line x1="750" y1="313" x2="788" y2="313" class="flow" marker-end="url(#arrow)"/>
+  <line x1="750" y1="355" x2="788" y2="355" class="flow" marker-end="url(#arrow)"/>
+  <line x1="750" y1="397" x2="788" y2="397" class="flow" marker-end="url(#arrow)"/>
+  <line x1="750" y1="439" x2="788" y2="439" class="flow" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+  <text x="732" y="297" class="lbl" text-anchor="middle">MCP</text>
+
+  <!-- scheduler pushes -->
+  <line x1="312" y1="414" x2="196" y2="414" class="red" marker-end="url(#arrow-red)"/>
+  <text x="242" y="405" class="lbl lbl-red" text-anchor="middle">speak in room</text>
+</svg>

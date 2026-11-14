@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jarvis Documentation</title>
+<meta name="description" content="A self-hosted voice assistant for the house: a puck in each room, a local LLM on an always-on PC, and tools it can call.">
+<link rel="icon" href="mark.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#introduction">Skip to content</a>
+<header class="topbar">
+<img src="mark.svg" alt="">
+<span class="title">Jarvis</span>
+<span class="sub">A self-hosted voice assistant for the house</span>
+<span class="spacer"></span>
+<a class="toplink" href="https://github.com/magna-nz/jarvis/blob/main/SPEC.md" target="_blank" rel="noopener">Spec</a>
+<a class="toplink" href="https://github.com/magna-nz/jarvis" target="_blank" rel="noopener">GitHub</a>
+</header>
+<div class="layout">
+<nav class="sidebar" aria-label="Sections">
+<div class="nav-group"><ul>
+<li><a href="#introduction">Introduction</a></li>
+<li><a href="#how-it-works">How it works</a></li>
+<li><a href="#hardware">Hardware</a></li>
+<li><a href="#orchestrator">The orchestrator</a></li>
+<li><a href="#tools">Tools</a></li>
+<li><a href="#timers">Timers and reminders</a></li>
+<li><a href="#music">Music</a></li>
+<li><a href="#deployment">Deployment</a></li>
+<li><a href="#roadmap">Roadmap</a></li>
+<li><a href="#open-questions">Open questions</a></li>
+</ul></div>
+</nav>
+<div class="main">
+
+<section class="section" id="introduction">
+<div class="row">
+<div class="prose">
+<div class="eyebrow">Overview</div>
+<h2>Introduction <a class="anchor" href="#introduction" aria-label="Link to this section">#</a></h2>
+<p class="lede">Talk to a puck in any room; a local LLM on your own PC answers, and can act.</p>
+
+<div class="note"><p><strong>Design only.</strong> Nothing described here is built yet. This site shows how the system is meant to fit together; the <a href="https://github.com/magna-nz/jarvis/blob/main/SPEC.md">spec</a> has the detail.</p></div>
+
+<p>Jarvis is a voice assistant that runs entirely on your home network. A small microphone puck sits in each room. When it hears the wake word it streams what you say to an always-on PC, which transcribes it, hands the text to a local LLM that can call tools, and speaks the reply back in the room you asked from.</p>
+
+<p>Most of it is existing open-source software, configured. The part this project builds is the <strong>orchestrator</strong>, the brain that runs the LLM and decides which tools to call, and the <strong>tool servers</strong> that give it things to do.</p>
+
+<h3>What it does</h3>
+<div class="table-wrap"><table><thead><tr><th>You say</th><th>What handles it</th></tr></thead><tbody>
+<tr><td>"How far away is the moon?"</td><td>The LLM, from its own knowledge.</td></tr>
+<tr><td>"Set a timer for ten minutes."</td><td>Home Assistant, without involving the LLM. The puck rings.</td></tr>
+<tr><td>"Turn off the lamp."</td><td>The LLM calls a device tool. "The lamp" means the one in your room.</td></tr>
+<tr><td>"Play some jazz."</td><td>The LLM calls the music tool. Spotify plays through that room's speaker.</td></tr>
+<tr><td>"Remind me at six to ring Mum."</td><td>The LLM calls the reminders tool. At six, Jarvis speaks up on its own.</td></tr>
+</tbody></table></div>
+</div>
+<div class="rail"><div class="codeblock"><div class="cb-head"><span class="cb-title">one turn</span><span class="cb-lang">text</span></div><pre><code class="language-text">wake word        on the puck
+speech-to-text   Whisper, on the PC
+thinking         orchestrator + LLM
+doing            tool servers (MCP)
+text-to-speech   Piper, on the PC
+playback         the puck, in your room</code></pre></div>
+<p class="rail-note">Audio leaves the puck only after the wake word matches. Nothing leaves the house.</p></div>
+</div>
+
+<div class="row row-wide">
+<div class="prose">
+<figure><img src="overview-diagram.svg" alt="Each room has a Voice PE puck and a powered speaker. The puck streams audio to Home Assistant on an always-on PC, which uses Whisper for speech-to-text, the orchestrator for the reply, and Piper for text-to-speech. The orchestrator calls the LLM and tool servers; tools act through Home Assistant to control devices and play Spotify.">
+<figcaption>The whole system. Home Assistant is the plumbing between the rooms and everything else; the orchestrator is the only part that thinks.</figcaption>
+<div class="key"><span class="k-audio">audio</span><span class="k-plain">text and control</span><span class="k-push">Jarvis speaking unprompted</span></div>
+</figure>
+</div>
+</div>
+</section>
+
+<section class="section" id="how-it-works">
+<div class="row">
+<div class="prose">
+<div class="eyebrow">Mechanism</div>
+<h2>How it works <a class="anchor" href="#how-it-works" aria-label="Link to this section">#</a></h2>
+<p class="lede">One request, from your voice to the answer.</p>
+
+<p>Every voice assistant is the same chain of six steps. What differs is where each step runs. Here, only the first and last happen in the room.</p>
+
+<ol>
+<li><strong>Wake word.</strong> The puck listens continuously, on the device, for one phrase. Until it matches, no audio goes anywhere.</li>
+<li><strong>Speech-to-text.</strong> The puck streams audio to Home Assistant, which passes it to Whisper and gets text back.</li>
+<li><strong>Local shortcuts.</strong> Home Assistant checks the text against its built-in commands. Timers and other fixed phrases are handled here, instantly.</li>
+<li><strong>Thinking.</strong> Everything else goes to the orchestrator, along with which room it came from. The orchestrator asks the LLM, runs any tools the LLM wants, and repeats until there is a reply.</li>
+<li><strong>Text-to-speech.</strong> Home Assistant sends the reply text to Piper and gets audio back.</li>
+<li><strong>Playback.</strong> The audio plays on the puck that heard the request.</li>
+</ol>
+
+<h3>Why the room travels with the request</h3>
+<p>The puck that heard you identifies the room, and that fact is attached to the request by Home Assistant, not guessed by the LLM. It is what makes "turn off the lamp" and "play some jazz" mean <em>here</em>.</p>
+</div>
+<div class="rail"><div class="codeblock"><div class="cb-head"><span class="cb-title">latency targets</span><span class="cb-lang">text</span></div><pre><code class="language-text">end of speech detected   0.5 - 0.7 s
+speech-to-text           0.3 s
+LLM, first sentence      0.5 - 0.8 s
+text-to-speech           0.2 s
+                         -----------
+first spoken word        under 2 s</code></pre></div>
+<p class="rail-note">Targets to measure against, not measurements. Every turn will log its per-stage timings from the first day.</p></div>
+</div>
+
+<div class="row row-wide">
+<div class="prose">
+<figure><div class="diagram"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as You
+    participant P as Puck
+    participant HA as Home Assistant
+    participant W as Whisper
+    participant O as Orchestrator
+    participant L as LLM
+    participant T as Piper
+    U->>P: "Jarvis, how far away is the moon?"
+    Note over P: wake word matched on the device
+    P->>HA: audio stream
+    HA->>W: audio
+    W-->>HA: "how far away is the moon"
+    Note over HA: no built-in command matches
+    HA->>O: text, room, session
+    O->>L: conversation + tool list
+    L-->>O: answer
+    O-->>HA: reply text
+    HA->>T: reply text
+    T-->>HA: audio
+    HA-->>P: audio
+    P-->>U: spoken answer
+</pre></div>
+<figcaption>A plain question. No tool is needed, so the LLM answers in one pass.</figcaption></figure>
+</div>
+</div>
+</section>
+
+<section class="section" id="hardware">
+<div class="row">
+<div class="prose">
+<div class="eyebrow">In the room</div>
+<h2>Hardware <a class="anchor" href="#hardware" aria-label="Link to this section">#</a></h2>
+<p class="lede">One puck and one speaker per room. No Raspberry Pi anywhere.</p>
+
+<p>Hearing a voice from across a room is the hard part of a voice assistant, harder than the LLM. An Echo manages it with three things, and the puck has all three:</p>
+<ul>
+<li><strong>More than one microphone.</strong> Comparing when a sound reaches each one lets the device favour your voice over noise from elsewhere.</li>
+<li><strong>Echo cancellation.</strong> The device knows exactly what its own speaker is playing and subtracts it from what the microphones hear. This is how it hears you over its own music.</li>
+<li><strong>A dedicated audio chip</strong> that does this continuously, along with the wake word.</li>
+</ul>
+
+<h3>Home Assistant Voice PE</h3>
+<p>An open-source equivalent of an Echo Dot: two microphones, an audio-processing chip, on-device wake word, a small speaker, a 3.5mm output, a physical mute switch and Wi-Fi. It is built to talk to Home Assistant, which is why Home Assistant sits in the middle of this design.</p>
+
+<h3>Why the speaker plugs into the puck</h3>
+<p>Echo cancellation only works on audio the puck itself is playing. A separate Wi-Fi speaker would sound better, but the puck could not subtract its sound, and the wake word would struggle whenever music was loud. A powered speaker on the puck's 3.5mm output keeps the music inside what the puck can cancel.</p>
+
+<div class="table-wrap"><table><thead><tr><th>Per room</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>Home Assistant Voice PE</td><td>Microphones, wake word, echo cancellation.</td></tr>
+<tr><td>Powered speaker with a 3.5mm input</td><td>Replies and music at a quality the puck's own speaker cannot manage.</td></tr>
+<tr><td>USB power</td><td>For the puck.</td></tr>
+</tbody></table></div>
+</div>
+<div class="rail">
+<p class="rail-note" style="margin-top:0">The store offers add-ons with the puck: the Home Assistant Green hub and Zigbee or Z-Wave radios. None are needed. The PC runs Home Assistant, and Tapo devices are Wi-Fi.</p>
+</div>
+</div>
+</section>
+
+<section class="section" id="orchestrator">
+<div class="row">
+<div class="prose">
+<div class="eyebrow">The brain</div>
+<h2>The orchestrator <a class="anchor" href="#orchestrator" aria-label="Link to this section">#</a></h2>
+<p class="lede">The one service this project writes from scratch.</p>
+
+<p>Home Assistant already knows how to manage pucks, move audio around and switch devices. What it does not have is your assistant's behaviour: how it talks, what it remembers, which tools it has. That lives in the orchestrator.</p>
+
+<p>The connection between the two is deliberately narrow. A thin integration inside Home Assistant, the Jarvis agent, does one thing: when a transcribed request arrives that Home Assistant did not handle itself, it posts the text to the orchestrator and returns whatever comes back.</p>
+
+<h3>The turn loop</h3>
+<ol>
+<li>Add what the LLM needs to know: the room, the time, the recent conversation.</li>
+<li>Ask the LLM, offering it the list of tools.</li>
+<li>If it asks for a tool, run it and give it the result, then ask again.</li>
+<li>When it produces words instead of a tool call, that is the reply.</li>
+</ol>
+
+<h3>Swapping the model</h3>
+<p>The orchestrator talks to the LLM through the OpenAI-compatible API at an address from configuration. Ollama provides that API on both the PC and the Mac, so moving the model is a one-line change, and nothing in the orchestrator may rely on behaviour specific to one server.</p>
+</div>
+<div class="rail"><div class="codeblock"><div class="cb-head"><span class="cb-title">POST /v1/converse · request</span><span class="cb-lang">json</span></div><pre><code class="language-json">{
+  "text": "turn off the lamp",
+  "session_id": "01JCX4...",
+  "satellite_id": "assist_satellite.lounge",
+  "room": "lounge",
+  "language": "en"
+}</code></pre></div>
+<div class="codeblock"><div class="cb-head"><span class="cb-title">response</span><span class="cb-lang">json</span></div><pre><code class="language-json">{
+  "reply": "Done.",
+  "session_id": "01JCX4...",
+  "continue_listening": false
+}</code></pre></div>
+<p class="rail-note">Proposed contract. <code>continue_listening</code> reopens the microphone when Jarvis has just asked you something.</p></div>
+</div>
+
+<div class="row row-wide">
+<div class="prose">
+<figure><img src="architecture-diagram.svg" alt="Inside the orchestrator: an HTTP API receives text and room from Home Assistant's Jarvis agent; the turn loop calls the LLM client, which talks to Ollama, and the MCP client, which talks to tool servers for home-assistant, music, reminders and any tool added later; a scheduler stores reminders and pushes announcements to a room through Home Assistant.">
+<figcaption>Inside the orchestrator. The <code>home-assistant</code> tool server is provided by Home Assistant's own MCP Server integration; the others are part of this project.</figcaption></figure>
+</div>
+</div>
+</section>
+
+<section class="section" id="tools">
+<div class="row">
+<div class="prose">
+<div class="eyebrow">Modularity</div>
+<h2>Tools <a class="anchor" href="#tools" aria-label="Link to this section">#</a></h2>
+<p class="lede">A new capability is a new tool server, not a change to the brain.</p>
+
+<p>Each thing Jarvis can do beyond talking is a <strong>tool</strong>, and tools are grouped into small servers that speak MCP, a standard protocol for offering tools to an LLM. When the orchestrator starts it connects to every server in its configuration and asks what tools each one has. Those descriptions are what the LLM sees.</p>
+
+<div class="table-wrap"><table><thead><tr><th>Server</th><th>What it offers</th><th>Where it comes from</th></tr></thead><tbody>
+<tr><td><code>home-assistant</code></td><td>Switch, dim, read the state of devices.</td><td>Home Assistant's MCP Server integration.</td></tr>
+<tr><td><code>music</code></td><td>Play, pause, skip, volume, per room.</td><td>This project; calls Music Assistant.</td></tr>
+<tr><td><code>reminders</code></td><td>Create, list and cancel reminders.</td><td>This project; uses the orchestrator's scheduler.</td></tr>
+</tbody></table></div>
+
+<h3>Rules a tool server follows</h3>
+<ul>
+<li>One capability per server, runnable and testable on its own.</li>
+<li>Descriptions are written for the LLM: short, concrete, one job per tool.</li>
+<li>A tool that acts in a room takes a <code>room</code> argument, and the orchestrator fills it in.</li>
+<li>A tool returns a short result to be turned into speech, never audio.</li>
+<li>A failing tool says why, so Jarvis can tell you.</li>
+</ul>
+</div>
+<div class="rail"><div class="codeblock"><div class="cb-head"><span class="cb-title">tools.json</span><span class="cb-lang">json</span></div><pre><code class="language-json">{
+  "servers": {
+    "home-assistant": {
+      "url": "http://homeassistant.local:8123/mcp_server/sse"
+    },
+    "music": {
+      "command": "jarvis-tool-music"
+    },
+    "reminders": {
+      "command": "jarvis-tool-reminders"
+    }
+  }
+}</code></pre></div>
+<p class="rail-note">Illustrative. Adding a capability means adding an entry here and restarting the orchestrator.</p></div>
+</div>
+
+<div class="row row-wide">
+<div class="prose">
+<figure><div class="diagram"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant HA as Home Assistant
+    participant O as Orchestrator
+    participant L as LLM
+    participant T as home-assistant tools
+    HA->>O: "turn off the lamp", room = lounge
+    O->>L: conversation + tool list
+    L-->>O: call turn_off(lamp)
+    Note over O: fills in room = lounge
+    O->>T: turn_off(lamp, lounge)
+    T->>HA: switch off light.lounge_lamp
+    HA-->>T: off
+    T-->>O: "lounge lamp is off"
+    O->>L: tool result
+    L-->>O: "Done."
+    O-->>HA: reply text
+</pre></div>
+<figcaption>A request that needs a tool. The LLM is asked twice: once to decide what to do, once to say what happened.</figcaption></figure>
+</div>
+</div>
+</section>
+
+<section class="section" id="timers">
+<div class="row">
+<div class="prose">
+<div class="eyebrow">Speaking unprompted</div>
+<h2>Timers and reminders <a class="anchor" href="#timers" aria-label="Link to this section">#</a></h2>
+<p class="lede">Two ways for sound to come out of a puck that nobody just spoke to.</p>
+
+<h3>Timers</h3>
+<p>Home Assistant recognises timer phrases itself, before the orchestrator sees them. The timer runs on the puck that heard you and rings there. It is fast, needs no LLM and needs no code from this project.</p>
+
+<h3>Reminders</h3>
+<p>A reminder carries words ("ring Mum") and has to survive restarts, so the orchestrator owns it. When it comes due, the orchestrator asks Home Assistant to announce the text on a particular puck. That announce action is the only way the server starts speaking by itself, and anything else that needs to interrupt you later will use the same path.</p>
+</div>
+<div class="rail"></div>
+</div>
+
+<div class="row row-wide">
+<div class="prose">
+<figure><div class="diagram"><pre class="mermaid">
+sequenceDiagram
+    participant U as You
+    participant P as Puck
+    participant HA as Home Assistant
+    participant O as Orchestrator
+    rect rgba(31, 122, 109, 0.10)
+    Note over U,HA: A timer never reaches the orchestrator
+    U->>P: "Jarvis, set a timer for ten minutes"
+    P->>HA: audio
+    Note over HA: matches a built-in command
+    HA-->>P: "Timer set", timer starts on the puck
+    Note over P: ten minutes pass
+    P-->>U: rings
+    end
+    rect rgba(192, 57, 43, 0.10)
+    Note over U,O: A reminder is pushed by the orchestrator
+    Note over O: 6:00 pm, reminder due
+    O->>HA: announce "Time to ring Mum" in the lounge
+    HA->>P: synthesised audio
+    P-->>U: "Time to ring Mum"
+    end
+</pre></div>
+<figcaption>Timers stay local to Home Assistant and the puck. Reminders start in the orchestrator and are pushed to a room.</figcaption></figure>
+</div>
+</div>
+</section>
+
+<section class="section" id="music">
+<div class="row">
+<div class="prose">
+<div class="eyebrow">Spotify</div>
+<h2>Music <a class="anchor" href="#music" aria-label="Link to this section">#</a></h2>
+<p class="lede">The LLM chooses what to play. It never touches the audio.</p>
+
+<p>Asking for music is a tool call like any other. The <code>music</code> tool passes the request and the room to Music Assistant, which runs inside Home Assistant, signs in to Spotify, and streams to a player. The player is the puck in your room, and the sound comes out of the powered speaker plugged into it.</p>
+
+<p>Because the puck is the thing playing, its echo cancellation still applies, so "Jarvis, stop" can be heard over the music.</p>
+
+<div class="note"><p>Two parts of this are assumptions until tested with the first puck: that Music Assistant can use the puck as a player, and that the wake word holds up when the external speaker is loud. Both are in <a href="#open-questions">Open questions</a>.</p></div>
+</div>
+<div class="rail"></div>
+</div>
+
+<div class="row row-wide">
+<div class="prose">
+<figure><div class="diagram"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant O as Orchestrator
+    participant M as music tool
+    participant MA as Music Assistant
+    participant S as Spotify
+    participant P as Puck + speaker
+    Note over O: "play some jazz", room = kitchen
+    O->>M: play("jazz", kitchen)
+    M->>MA: play "jazz" on the kitchen player
+    MA->>S: search, start stream
+    S-->>MA: audio
+    MA-->>P: audio
+    M-->>O: "playing a jazz playlist in the kitchen"
+    Note over P: later, "Jarvis, stop" is heard over the music
+</pre></div>
+<figcaption>Playing music. The stream goes from Spotify to the room through Music Assistant; the orchestrator only gives the instruction.</figcaption></figure>
+</div>
+</div>
+</section>
+
+<section class="section" id="deployment">
+<div class="row">
+<div class="prose">
+<div class="eyebrow">Where it runs</div>
+<h2>Deployment <a class="anchor" href="#deployment" aria-label="Link to this section">#</a></h2>
+<p class="lede">Everything on one always-on PC to begin with, arranged so any part can move.</p>
+
+<p>The server is a PC with an RTX 3080 Ti. Its 12 GB of video memory holds Whisper, Piper and a mid-sized LLM together. Every part is a network service with its own address, so no part assumes another is on the same machine.</p>
+
+<div class="table-wrap"><table><thead><tr><th>Service</th><th>Port</th><th>Uses the GPU</th></tr></thead><tbody>
+<tr><td>Home Assistant</td><td class="num">8123</td><td>No</td></tr>
+<tr><td>Whisper</td><td class="num">10300</td><td>Yes</td></tr>
+<tr><td>Piper</td><td class="num">10200</td><td>No</td></tr>
+<tr><td>Ollama</td><td class="num">11434</td><td>Yes</td></tr>
+<tr><td>Orchestrator</td><td class="num">8700</td><td>No</td></tr>
+<tr><td>Music Assistant</td><td class="num">8095</td><td>No</td></tr>
+</tbody></table></div>
+
+<h3>Moving to the Mac</h3>
+<ul>
+<li>Parts can move one at a time. The LLM on the Mac with speech still on the PC is a valid arrangement.</li>
+<li>Containers on macOS cannot reach the GPU, so Ollama and Whisper run natively there. Everything else can stay in containers.</li>
+<li>The pucks only know Home Assistant's address, so they are unaffected.</li>
+</ul>
+</div>
+<div class="rail"><div class="codeblock"><div class="cb-head"><span class="cb-title">.env · everything on the PC</span><span class="cb-lang">bash</span></div><pre><code class="language-bash">HOME_ASSISTANT_URL="http://pc.local:8123"
+LLM_BASE_URL="http://pc.local:11434/v1"
+LLM_MODEL="to-be-chosen"</code></pre></div>
+<div class="codeblock"><div class="cb-head"><span class="cb-title">.env · model moved to the Mac</span><span class="cb-lang">bash</span></div><pre><code class="language-bash">HOME_ASSISTANT_URL="http://pc.local:8123"
+LLM_BASE_URL="http://mac.local:11434/v1"
+LLM_MODEL="to-be-chosen"</code></pre></div>
+<p class="rail-note">Illustrative. One line changes.</p></div>
+</div>
+</section>
+
+<section class="section" id="roadmap">
+<div class="row">
+<div class="prose">
+<div class="eyebrow">Build order</div>
+<h2>Roadmap <a class="anchor" href="#roadmap" aria-label="Link to this section">#</a></h2>
+<p class="lede">Each phase ends with something that works and can be lived with.</p>
+
+<div class="table-wrap"><table><thead><tr><th>Phase</th><th>What gets built</th><th>Done when</th></tr></thead><tbody>
+<tr><td><strong>0. Bench</strong></td><td>Home Assistant, Whisper, Piper and Ollama on the PC, tested from a browser.</td><td>A typed and a spoken question both get a spoken answer.</td></tr>
+<tr><td><strong>1. One room</strong></td><td>One puck on the stock pipeline.</td><td>Questions and timers work from across the room.</td></tr>
+<tr><td><strong>2. Own brain</strong></td><td>The orchestrator, the Jarvis agent, the <code>home-assistant</code> tools.</td><td>A device is controlled by voice through the orchestrator, with timings logged.</td></tr>
+<tr><td><strong>3. Music</strong></td><td>Music Assistant, Spotify, the <code>music</code> tool, a powered speaker.</td><td>"Play some jazz" plays in the room and "stop" is heard over it.</td></tr>
+<tr><td><strong>4. Whole house</strong></td><td>More pucks; reminders and announcements.</td><td>A reminder set in one room can be delivered in another.</td></tr>
+<tr><td><strong>5. Later</strong></td><td>Mac migration, memory across conversations, a push-to-talk phone app.</td><td>To be specified.</td></tr>
+</tbody></table></div>
+</div>
+<div class="rail"></div>
+</div>
+</section>
+
+<section class="section" id="open-questions">
+<div class="row">
+<div class="prose">
+<div class="eyebrow">Not yet known</div>
+<h2>Open questions <a class="anchor" href="#open-questions" aria-label="Link to this section">#</a></h2>
+<p class="lede">Assumptions the design rests on that have not been tested.</p>
+
+<ol>
+<li><strong>Echo cancellation on the 3.5mm output.</strong> Does the puck still hear the wake word with music loud on an external speaker? Test with the first puck before buying more speakers.</li>
+<li><strong>Music Assistant and the puck.</strong> Confirm the puck works as a player, including lowering the music while Jarvis speaks.</li>
+<li><strong>Streaming replies.</strong> Can the Jarvis agent feed partial text into text-to-speech, or must the reply be complete first? This decides whether long answers can meet the latency target.</li>
+<li><strong>Which model.</strong> It has to fit beside Whisper in 12 GB and call tools reliably. That needs a small set of real requests to evaluate against.</li>
+<li><strong>Orchestrator language.</strong> The Jarvis agent must be Python. The orchestrator can be anything with an MCP client and an HTTP server.</li>
+<li><strong>Spotify access.</strong> Premium is needed for playback control, and Spotify's developer terms have tightened.</li>
+<li><strong>The PC's operating system.</strong> Windows with WSL2 or Linux changes how the GPU reaches the containers.</li>
+<li><strong>Knowledge beyond the model.</strong> Weather, news and calendar each need a tool. Which come first?</li>
+</ol>
+</div>
+<div class="rail"></div>
+</div>
+</section>
+
+<footer class="site-foot">
+<p>Jarvis is a design in progress. The specification and source live at
+<a href="https://github.com/magna-nz/jarvis" target="_blank" rel="noopener">github.com/magna-nz/jarvis</a>.</p>
+</footer>
+</div>
+</div>
+<script>
+  window.__mermaidTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) {
+    mermaid.initialize({ startOnLoad: true, theme: window.__mermaidTheme, securityLevel: 'strict' });
+  }
+</script>
+<script src="site.js"></script>
+</body>
+</html>
