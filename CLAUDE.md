@@ -38,6 +38,7 @@ gh api repos/magna-nz/jarvis/issues/<parent>/sub_issues --jq '.[] | "\(.number) 
 - Do not close a parent in the pull request. A parent is closed when all its sub-issues are closed **and** its "done when" line has been checked and is true.
 - When a parent closes, tick its box in `FEATURES.md`.
 - If the work changes the design, update `SPEC.md` in the same pull request.
+- If the work adds or changes a component or feature, update the docs site in the same pull request. See [Docs site](#docs-site).
 - If new sub-work turns up, create a sub-issue under the right parent with the `task` label and the slice's milestone, rather than doing it unrecorded.
 
 ## Planning later slices
@@ -50,6 +51,15 @@ sub-issues when it becomes the next one, not earlier.
 Nothing is built yet. Add the commands here when slice 1 creates them.
 
 ## Docs site
+
+The site at https://magna-nz.github.io/jarvis/ must always describe the system
+as it is. Anything new, and any feature, updates it in the same pull request as
+the code, never afterwards:
+
+- A new component or feature gets its own section or is added to the section it belongs in, and appears in the diagrams it affects.
+- A change to how something works updates the prose, the diagram and any example in the code rail that shows it.
+- When something moves from designed to built, say so on the site, and update the roadmap table.
+- If a pull request needs no site change, say why in its description.
 
 `docs/` is served by GitHub Pages from `main`. It is hand-written HTML with no
 build step. Diagrams are standalone SVG files with a light card background so
